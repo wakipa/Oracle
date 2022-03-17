@@ -1,0 +1,1 @@
+alter database add logfile group 3 ('C:\APP\ORACLE\ORADATA\ORCL\REDO03A.LOG','C:\Stage\ORADATA\REDO03B.LOG') size 100m;

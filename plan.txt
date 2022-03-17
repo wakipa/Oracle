@@ -1,0 +1,353 @@
+Logmein : Pa55w.rd
+pascal.guerard@ib.cegos.fr
+
+I Présentation d'Oracle
+A/ Distinction Instance-BDD
+B/ Dossiers sur le serveur
+C/ Les fichiers Oracle
+	1) fichier de paramétrage
+	2) fichiers de contrôle
+	3) fichiers de datas permanentes
+	4) fichiers de datas temporaires
+	5) fichier de redos (logs)
+D/ Mémoire allouée à l'instance (sga)
+E/ Les processus
+
+II Connexions client-serveur
+A fichiers de connexions
+	1) tnsnames.ora
+	2) listener.ora
+B Les utilitaires
+	1) Net Manager (netmgr)
+	2) tnsping
+	3) Listener : lsnrctl
+
+III Utilisation SQLPlus
+IV Gestion de l'instance et des redos
+A/ Démarrages et arrêts de base de données (4.35 à 4.42)
+	1) démarrages
+startup restrict ==> privilège restricted session
+alter system disable restricted session;
+alter system enable restricted session;
+	2) arrêts
+B/ ADRCI (automatic diagnostic repository command interpreter)
+C/ Vues dynamiques (4.47) : v$
+	1) vue pertinentes dès l'état nomount
+		a) l'instance : v$instance
+		b) la mémoire : v$sga (show sga)
+		c) les processus : v$bgprocess
+		d) les paramètres : v$system_parameter2 (show parameters nom_paramètre)
+	2) vues pertinentes dès l'état mount
+		a) les fichiers de contrôle : v$controfile
+		b) base de données : v$database
+		c) datafile (permanentes) : v$datafile
+		d) tempfile (temporaires) : v$tempfile
+		e) logfile (redos ou logs) : v$log et v$logfile
+D/ Gestion des fichiers
+	1) liste des fichiers
+	2) fichier paramétrage
+==> V8 : init<SID>.ora (pfile ou ifile)
+spfile = Spfile<SID>.ora
+emplacement : oracle_home\database (dbs sous Unix/linux)
+		a) déplacer le spfile
+==> oracle_base\admin\orcl\pfile
+		b) créer un pfile à partir d'un spfile (4.24)
+		c) créer un spfile à partir d'un pfile
+		d) mise à jour des paramètres (4.28)
+alter system set nom_paramètre=valeur [scope=memory|spfile|both];
+	3) Fichiers de contrôle (module 8)
+		a) ajouter, supprimer, renommer ou déplacer un fichier de contrôle (8-12 à 8-13)
+Actions :
+- modifier le paramètre control_files
+- Arrêter l'instance (la bdd)
+- OS : effectuer la modification
+- démarrer la bdd
+		b) perte d'un fichier de contrôle
+Actions :
+- shutdown abort
+OS : réparer = copier-coller-renommer du fichier bien portant
+
+Cas 1 : pb fichier
+- redémarrer
+
+Cas 2 : pb disque
+- startup nomount
+- alter system set control_files=..................scope=spfile;
+- shutdown immediate
+- redémarrer
+		c) perte de tous les fichiers de contrôle (8.8)
+
+	3) gestion des fichiers de redos (module 9)
+		a) supprimer un groupe
+Actions :
+- vérification du statut du groupe @v_logfile
+si current = alter system switch logfile;
+si active = alter system checkpoint;
+- Supprimer le groupe
+alter database drop logfile group numero_groupe;
+- OS : supprimer le(s) fichiers
+		b) ajouter un groupe
+alter database add logfile group numero_groupe
+('nom_fichier1','nom_fichier2') size valeur [k|m|g] [reuse];
+		c) renommer les fichiers
+alter database rename file 'ancien_nom' to 'nouveau_nom';
+Actions : 
+- shutdown immediate
+- Redémarrer à l'état mount
+- OS : renommer les fichiers
+- Oracle = renommer les fichiers
+- Ouvrir la bdd
+		d) ajouter un membre à un groupe
+alter database add logfile member 'nom_fichier' to group numero_groupe;
+
+		e) supprimer un membre
+alter database drop logfile member 'nom_fichier';
+
+V Architecture d'une base de données Oracle
+	A/ schéma
+	B/ Vues statiques (open)
+dba_typeobjet
+user_typeobjet
+all_typeobjet
+
+	C/ Stockage (module 14)
+		1) bloc
+		2) extent
+		3) segment
+		4) tablespace
+
+-- mettre les groupes de logs 1 et 2 à 100M
+
+
+VI Gestion des tablespaces et des fichiers (modules 10 et 11)
+A/ Tablespaces permanents
+	1) création du tbs (10.4)
+create [smallfile|bigfile] tablespace nom_tbs 
+datafile 'nom_fichier' size valeur [k|m|g|t] [autoextend off|on next valeur [k|m|g|t] [maxsize unlimited|valeur [k|m|g|t]]
+,['nom_fichier2'...]
+[online|offline]
+[extent management local autoallocate|uniform [size valeur [k|m|g]]
+[blocksize valeur [k]];
+
+	2) modification d'un tbs ou fichier (11-6 à 11-10)
+alter tablespace nom_tbs
+| add datafile 'clause_fichier';
+| rename datafile 'ancien_nom' to 'nouveau_nom' (=alter database rename file 'ancien_nom' to 'nouveau_nom');
+| offline|online;
+| read write|only;
+| begin|end backup;
+
+alter database datafile 'nom_fichier' | numéro_fichier
+| autoextend on...
+| resize valeur [k|m|g|t]
+| offline|online
+
+	3) déplacer un fichier
+2 méthodes
+==> V11
+Actions (open) :
+- mettre le tablespace offline
+- OS : déplacer le fichier (couper-coller)
+- Oracle : renommer le fichier = alter database rename file 'ancien_nom' to 'nouveau_nom'
+- remettre le tablespace online
+
+Depuis Oracle 12c (11-19)
+alter database move datafile num_fichier to 'nouveau_nom';
+
+	4) supprimer un tablespace (11-21)
+drop tablespace nom_tbs [including contents[and datafiles]] [cascade constraints];
+
+	5) créer un tablespace blocs 16k
+
+B/ tablespaces temporaires (10-15)
+
+create temporary tablespace nom_tbs
+tempfile 'nom_fichier' size valeur [k|m|g] [autoextend off|on next valeur [k|m|g] [maxsize unlimited|valeur [k|m|g|t]];
+
+
+alter tablespace nom_tbs 
+add tempfile 'nom_fichier' size valeur [k|m|g] [autoextend off|on next valeur [k|m|g] [maxsize unlimited|valeur [k|m|g|t]];
+
+alter database tempfile 
+| resize valeur [k|m|g]
+| drop including datafiles;
+
+drop tablespace nom_tbs including datafiles;
+
+C/ tablespace d'undo (10-18)
+create undo tablespace nom_tbs
+datafile 'clause_fichier';
+
+VII Outils d'administration graphiques
+A/ SQL Developper
+B/ Oracle Enterprise Manager Express Edition
+
+VIII Gestion des tables et des index (module 13)
+A/ Les tables
+	1) types de données
+	2) créer une table (13-10), dupliquer (13-18)
+	3) modifier une table (13-32)
+alter table nom_table
+| add nom_colonne type [liste_contraintes];
+| modify nom_colonne type [liste_contraintes];
+| drop column nom_colonne;
+| add constraint nom_contrainte contrainte;
+| drop constraint nom_contrainte contrainte;
+| disable|enable constraint nom_contrainte contrainte;
+
+	4) suppression de tables 
+drop table nom_table [cascade constraints] [purge];
+
+	5) manipulations sur les tables
+		a) truncate
+		b) shrink space
+		c) move
+
+	6) tables temporaires (13-17)
+	7) tables partitionnées
+partition by hash
+partition by list
+partition by range
+
+B/ Les index
+	a) index bitmap
+	b) b-tree
+index_stats (vue) col height
+
+IX Gestion des utilisateurs (module 18)
+Un user est caractérisé :
+	- mode d'authentification
+	- profil de connexion
+	- tablespace par défaut 
+	- tablespace temporaire
+	- quotas par tablespace
+	- privilèges (rôles)
+
+A/ Création (18-5)/modification/suppression d'un user
+
+alter user nom_user modif;
+drop user nom_user;
+
+B/ Quotas
+C/ Profils (18-2)
+	1) limites "password"
+	2) limites "kernel"
+D/ Privilèges et rôles
+	1) privilèges "system"
+grant liste_privilèges|all to liste_users|public [with admin option];
+revoke liste_privilèges|all from liste_users|public;
+
+	2) privilèges objet
+grant liste_privilèges|all on nom_objet to liste_users|public [with grant option];
+revoke liste_privilèges|all on nom_objet from liste_users|public;
+
+	3) les rôles
+create role nom_role [identified by mdp];
+
+-accorder des privilèges à un rôle
+grant liste_privilèges|all to role;
+grant liste_privilèges|all on nom_objet to role;
+
+-accorder un role à un utilisateur
+grant liste_role to liste_users;
+
+drop role nom_role
+
+alter user nom_user default role liste_role|all [except liste_role];
+alter user nom_user default role none;
+
+E/ Mode d'authentification
+	1) authentification purement Oracle
+	2) authentification mixte
+	3) authentification purement OS (18-8)
+
+F/ les comptes d'administration
+conn / as role
+conn login/mdp as role
+
+user : sys
+role : Sysdba ; sysoper ; sysasm
+
+V12 : user : sys ; sysbackup ; sysdg ; syskm
+
+	1) authentification os
+Conn / as sysdba ==> group user OS : ora_dba (windows) ; dba (unix/linux)
+Conn / as sysoper ==> group user OS : ora_oper (windows) ; oper (unix/linux)
+
+	2) authentification par MDP
+Fichier de mot de passe
+emplacement : oracle_home\database (dbs pour unix/linux)
+nom : pwd<sid>.ora (windows) ; orapw<sid>.ora
+
+Gestion du fichier :
+	- paramètre : remote_login_passwordfile
+	- vue : v$pwfile_users
+	- utilitaire : orapwd
+
+G/ Les audits
+	1) audit sur les objets
+audit liste_action on objet by access;
+noaudit liste_action|all on objet;
+Vue dba_audit_object
+	2) audit sur les users
+
+X Gestion des sessions et des transactions
+	A/ notion de transaction
+	B/ Ordres SQL
+Commit;
+Commit implicites : ordres LDD (create, alter, drop) ; disc
+
+Rollback;
+Rollback implicites : shutdown immediate|abort ; panne ; tuer la session
+
+savepoint nom_point de reprise;
+
+insert into....
+savepoint sp1;
+update ....
+savepoint sp2;
+delete...
+savepoint sp3;
+..
+...
+rollback to sp2; 
+
+	C/sessions et transactions (vues)
+v$session
+v$_transaction
+v$_lock
+
+	D/Segments de rollback (Fichier d'undo)
+
+XII - Création d'une base de données Multitenant (module 6)
+A/ Instruction propres aux pluggable
+show con_name
+alter session set container=nom_base;
+
+B/ créer une base pluggable (pdb) (6-9 à 6.13)
+	1) via pdb$seed
+create pluggable database nom_base admin user nom_admin identified by mdp;
+
+	2) créer un pbd à partir d'une autre pdb
+create pluggable database nom_base from nom_base;
+
+C/ supprimer une pdb
+drop pluggable database nom_base including datafiles;
+
+D/brancher/débrancher une pdb
+	1)débrancher
+Actions
+- mettre la base de pdb à l'état mount
+- débrancher : alter pluggable database nom_base unplug into 'nom_fichier.xml'
+- supprimer la pdb : drop pluggable database nom_base keep datafiles;
+	2) brancher une pdb
+create pluggable database nom_base using 'nom_fichier.xml';
+
+E/ Common user
+c##
+create user c##formateur identified by formateur;
+
+
+
+
+

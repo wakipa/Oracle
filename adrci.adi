@@ -1,0 +1,2 @@
+Set homepath home diag\rdbms\orcl\orcl
+Show alert -tail -f

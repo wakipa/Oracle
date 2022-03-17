@@ -1,0 +1,1 @@
+alter system set control_files='C:\Stage\oradata\control02.ctl','C:\app\oracle\oradata\orcl\control01.ctl' scope=spfile;

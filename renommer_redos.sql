@@ -1,0 +1,2 @@
+alter database rename file 'C:\app\oracle\oradata\orcl\REDO01.LOG' to 'C:\app\oracle\oradata\orcl\REDO01A.LOG';
+alter database rename file 'C:\app\oracle\oradata\orcl\REDO02.LOG' to 'C:\app\oracle\oradata\orcl\REDO02A.LOG';
